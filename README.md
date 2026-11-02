@@ -43,46 +43,37 @@ npx -y @smithery/cli install @devabdultech/hn-mcp --client claude
 
 ## Tools
 
-1. `search`
-   * Search for stories and comments on Hacker News using Algolia's search API
-   * Inputs:
-         * `query` (string): Search query
-         * `type` (optional string): Filter by type ('story' or 'comment')
-         * `page` (optional number): Page number for pagination
-         * `hitsPerPage` (optional number): Results per page (max 100)
-   * Returns: Search results with stories and comments
+All tools are read-only and need no API key. Every result includes an HN link and item ID.
 
-2. `getStories`
-   * Get multiple stories by type (top, new, best, ask, show, job)
-   * Inputs:
-         * `type` (string): Type of stories to fetch ('top', 'new', 'best', 'ask', 'show', 'job')
-         * `limit` (optional number): Number of stories to fetch (max 100)
-   * Returns: Array of story objects
+1. `search`: search the full HN archive (stories and comments) via Algolia
+   - `query` (string): keywords; matching is full-text, not semantic, so 1-4 words work best
+   - `type` (optional): `all` (default), `story`, `comment`, `ask_hn`, `show_hn`
+   - `sortBy` (optional): `relevance` (default) or `date` (newest first)
+   - `minPoints`, `minComments` (optional): quality filters for stories (HN hides comment scores)
+   - `dateFrom`, `dateTo` (optional, `YYYY-MM-DD`): date range
+   - `author` (optional): only items by this user
+   - `storyId` (optional): only comments inside this story
+   - `page`, `hitsPerPage` (optional, max 100): pagination
+   - Comment results show the comment text and the story they belong to
 
-3. `getStoryWithComments`
-   * Get a story along with its comment thread
-   * Inputs:
-         * `id` (number): Story ID
-   * Returns: Story details with nested comments
+2. `getStoryWithComments`: a story and its discussion as an indented thread
+   - `id` (number): story ID
+   - `maxComments` (optional, default 80), `maxDepth` (optional, default 4), `maxCommentLength` (optional, default 1500)
+   - Top-level comments follow HN's ranking and are picked breadth-first, so large threads stay readable; the output says how many comments were hidden
 
-4. `getCommentTree`
-   * Get the full comment tree for a story
-   * Inputs:
-         * `storyId` (number): ID of the story
-   * Returns: Hierarchical comment tree structure
+3. `getCommentTree`: same as `getStoryWithComments` without the story header (takes `storyId`)
 
-5. `getUser`
-   * Get a user's profile information
-   * Inputs:
-         * `id` (string): Username
-   * Returns: User profile details including karma, created date, and about text
+4. `getStory`: a story's metadata and text, without comments
 
-6. `getUserSubmissions`
-   * Get a user's submissions (stories and comments)
-   * Inputs:
-         * `id` (string): Username
-   * Returns: Array of user's submitted stories and comments
+5. `getStories`: current lists: `top`, `new`, `best`, `ask`, `show`, `job` (`limit` up to 100)
 
+6. `getComment` / `getComments`: one comment, or a story's top-level comments only
+
+7. `getUser`: profile (karma, creation date, about)
+
+8. `getUserSubmissions`: a user's latest stories and/or comments, newest first (`type`, `limit`)
+
+Comment HTML is converted to plain text (links kept, entities decoded) and deleted comments are skipped, which keeps responses compact for LLMs.
 
 ### Contributing
 

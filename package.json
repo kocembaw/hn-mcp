@@ -1,6 +1,6 @@
 {
   "name": "@devabdultech/hn-mcp-server",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "main": "./dist/index.js",
   "type": "module",
   "bin": {
@@ -19,7 +19,8 @@
   ],
   "scripts": {
     "build": "tsc && shx chmod +x dist/*.js",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prepare": "npm run build"
   },
   "keywords": [
     "mcp",
@@ -33,7 +34,7 @@
   "license": "MIT",
   "description": "MCP Server for using the Hacker News API",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.6.1",
+    "@modelcontextprotocol/sdk": "^1.12.0",
     "@types/node": "^22.13.7",
     "@types/node-fetch": "^2.6.12",
     "node-fetch": "^3.3.2",

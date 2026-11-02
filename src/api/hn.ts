@@ -1,17 +1,27 @@
-import fetch from "node-fetch";
+import { fetchJson } from "./http.js";
 
 const API_BASE_URL = "https://hacker-news.firebaseio.com/v0";
+
+export type StoryListType = "top" | "new" | "best" | "ask" | "show" | "job";
+
+const LIST_ENDPOINTS: Record<StoryListType, string> = {
+  top: "topstories",
+  new: "newstories",
+  best: "beststories",
+  ask: "askstories",
+  show: "showstories",
+  job: "jobstories",
+};
 
 /**
  * Client for the official Hacker News API
  */
 export class HackerNewsAPI {
   /**
-   * Fetch an item by ID
+   * Fetch an item by ID (returns null if it does not exist)
    */
   async getItem(id: number): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/item/${id}.json`);
-    return response.json();
+    return fetchJson(`${API_BASE_URL}/item/${id}.json`);
   }
 
   /**
@@ -22,74 +32,34 @@ export class HackerNewsAPI {
   }
 
   /**
-   * Fetch top stories
+   * Fetch story IDs for one of the front-page lists
    */
-  async getTopStories(limit: number = 30): Promise<number[]> {
-    const response = await fetch(`${API_BASE_URL}/topstories.json`);
-    const ids = (await response.json()) as number[];
-    return ids.slice(0, limit);
+  async getStoryIds(type: StoryListType, limit: number = 30): Promise<number[]> {
+    const ids = await fetchJson<number[]>(
+      `${API_BASE_URL}/${LIST_ENDPOINTS[type]}.json`
+    );
+    return (ids || []).slice(0, limit);
   }
 
-  /**
-   * Fetch new stories
-   */
-  async getNewStories(limit: number = 30): Promise<number[]> {
-    const response = await fetch(`${API_BASE_URL}/newstories.json`);
-    const ids = (await response.json()) as number[];
-    return ids.slice(0, limit);
-  }
-
-  /**
-   * Fetch best stories
-   */
-  async getBestStories(limit: number = 30): Promise<number[]> {
-    const response = await fetch(`${API_BASE_URL}/beststories.json`);
-    const ids = (await response.json()) as number[];
-    return ids.slice(0, limit);
-  }
-
-  /**
-   * Fetch ask stories
-   */
-  async getAskStories(limit: number = 30): Promise<number[]> {
-    const response = await fetch(`${API_BASE_URL}/askstories.json`);
-    const ids = (await response.json()) as number[];
-    return ids.slice(0, limit);
-  }
-
-  /**
-   * Fetch show stories
-   */
-  async getShowStories(limit: number = 30): Promise<number[]> {
-    const response = await fetch(`${API_BASE_URL}/showstories.json`);
-    const ids = (await response.json()) as number[];
-    return ids.slice(0, limit);
-  }
-
-  /**
-   * Fetch job stories
-   */
-  async getJobStories(limit: number = 30): Promise<number[]> {
-    const response = await fetch(`${API_BASE_URL}/jobstories.json`);
-    const ids = (await response.json()) as number[];
-    return ids.slice(0, limit);
-  }
+  async getTopStories(limit = 30) { return this.getStoryIds("top", limit); }
+  async getNewStories(limit = 30) { return this.getStoryIds("new", limit); }
+  async getBestStories(limit = 30) { return this.getStoryIds("best", limit); }
+  async getAskStories(limit = 30) { return this.getStoryIds("ask", limit); }
+  async getShowStories(limit = 30) { return this.getStoryIds("show", limit); }
+  async getJobStories(limit = 30) { return this.getStoryIds("job", limit); }
 
   /**
    * Fetch a user by ID
    */
   async getUser(id: string): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/user/${id}.json`);
-    return response.json();
+    return fetchJson(`${API_BASE_URL}/user/${encodeURIComponent(id)}.json`);
   }
 
   /**
    * Fetch the maximum item ID
    */
   async getMaxItemId(): Promise<number> {
-    const response = await fetch(`${API_BASE_URL}/maxitem.json`);
-    const result = (await response.json()) as number;
-    return result;
+    return fetchJson<number>(`${API_BASE_URL}/maxitem.json`);
   }
 }
 
