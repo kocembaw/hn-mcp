@@ -47,7 +47,7 @@ export const SearchParamsSchema = z.object({
   query: z
     .string()
     .describe(
-      "Keywords to match (Algolia full-text, not semantic). 1-4 words work best. May be empty when filtering by author/storyId or sorting by date."
+      "Keywords to match in titles, URLs and text (Algolia full-text, not semantic). 1-4 words work best; for comments prefer specific multi-word queries. May be empty when filtering by author/storyId or sorting by date."
     ),
   type: z
     .enum(["all", "story", "comment", "ask_hn", "show_hn"])

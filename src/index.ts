@@ -30,7 +30,8 @@ import {
   UserSubmissionsRequestSchema,
 } from "./schemas/index.js";
 
-const VERSION = "1.3.0";
+const VERSION = "1.3.1";
+const ALGOLIA_MAX_HITS = 1000;
 
 const server = new Server(
   { name: "hackernews-mcp-server", version: VERSION },
@@ -53,11 +54,18 @@ const tools = [
     name: "search",
     description:
       "Search the full Hacker News archive (2007-today) for stories and comments via Algolia. " +
-      "Matching is by keywords, NOT meaning: to find something by topic, run several searches with " +
-      "short queries (1-4 words) using synonyms and related terms, then judge relevance yourself. " +
-      "Search comments (type=comment) to find practitioners' opinions and experience, and use " +
-      "minPoints / dates / sortBy=date to focus on quality or recency. Each result includes an HN link " +
-      "and ID; pass a story ID to getStoryWithComments to read the discussion.",
+      "Matching is by keywords, NOT meaning, and covers titles, URLs and post text, so some hits only " +
+      "mention a word in passing: run several searches with short queries (1-4 words) using synonyms " +
+      "and related terms, then judge relevance yourself. " +
+      "Stories: relevance order favors popular items; use minPoints / dates / sortBy=date to focus on " +
+      "quality or recency. " +
+      "Comments (type=comment) hold practitioners' opinions and experience, but HN hides comment scores, " +
+      "so relevance order among comments is close to arbitrary for 1-2 word queries. For comments use " +
+      "sortBy=date, a dateFrom/dateTo range, a more specific multi-word query, or storyId to search " +
+      "inside one discussion. " +
+      "Algolia only returns the first 1000 matches of any search, so narrow the query instead of paging " +
+      "deep. Each result includes an HN link and ID; pass a story ID to getStoryWithComments to read " +
+      "the discussion.",
     inputSchema: toInputSchema(SearchParamsSchema),
     annotations: { title: "Search Hacker News", ...readOnly },
   },
@@ -177,6 +185,19 @@ async function callTool(name: string, args: unknown) {
       if (p.dateFrom) numeric.push(`created_at_i>=${dayStart(p.dateFrom)}`);
       if (p.dateTo) numeric.push(`created_at_i<=${dayEnd(p.dateTo)}`);
 
+      const narrowHint =
+        p.type === "comment"
+          ? "a more specific query, a dateFrom/dateTo range or storyId"
+          : "a more specific query, a dateFrom/dateTo range or minPoints";
+
+      // Algolia caps every search at 1000 reachable hits; deeper pages come back empty.
+      if (p.page * p.hitsPerPage >= ALGOLIA_MAX_HITS) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `Algolia only returns the first ${ALGOLIA_MAX_HITS} results of a search (page * hitsPerPage must be below ${ALGOLIA_MAX_HITS}). Narrow the search with ${narrowHint} instead.`
+        );
+      }
+
       const sortByDate = p.sortBy === "date";
       const results = await algoliaApi.search(p.query, {
         tags: tags.join(",") || undefined,
@@ -185,6 +206,19 @@ async function callTool(name: string, args: unknown) {
         hitsPerPage: p.hitsPerPage,
         sortByDate,
       });
+
+      const nbHits: number = results?.nbHits ?? 0;
+      if (nbHits > ALGOLIA_MAX_HITS) {
+        notes.push(
+          `Note: only the first ${ALGOLIA_MAX_HITS} of ${nbHits} matches can be paged through. Narrow the search with ${narrowHint} rather than paging further.`
+        );
+      }
+      const queryWords = p.query.trim().split(/\s+/).filter(Boolean).length;
+      if (p.type === "comment" && !sortByDate && !p.storyId && queryWords <= 2 && nbHits > p.hitsPerPage) {
+        notes.push(
+          "Note: comments have no public scores, so this relevance order is close to arbitrary. For a useful sample use sortBy=date, a date range, or a more specific multi-word query."
+        );
+      }
 
       const filters = [
         p.type !== "all" && `type=${p.type}`,
